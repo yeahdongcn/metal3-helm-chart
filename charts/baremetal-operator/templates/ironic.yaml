@@ -1,96 +1,152 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: capm3-system
+---
+apiVersion: v1
+data:
+  CACHEURL: http://172.22.0.1/images
+  DEPLOY_KERNEL_URL: http://172.22.0.2:6180/images/ironic-python-agent.kernel
+  DEPLOY_RAMDISK_URL: http://172.22.0.2:6180/images/ironic-python-agent.initramfs
+  DHCP_RANGE: 172.22.0.10,172.22.0.100
+  HTTP_PORT: "6180"
+  INSPECTOR_REVERSE_PROXY_SETUP: "false"
+  IRONIC_ENDPOINT: http://172.22.0.2:6385/v1/
+  IRONIC_FAST_TRACK: "true"
+  IRONIC_INSPECTOR_ENDPOINT: http://172.22.0.2:5050/v1/
+  IRONIC_INSPECTOR_VLAN_INTERFACES: all
+  IRONIC_KERNEL_PARAMS: console=ttyS0
+  PROVISIONING_INTERFACE: eth2
+  RESTART_CONTAINER_CERTIFICATE_UPDATED: "false"
+kind: ConfigMap
+metadata:
+  name: ironic-bmo-configmap-b796c74gkd
+  namespace: capm3-system
+---
+apiVersion: v1
+data:
+  password: Y2hhbmdlbWU=
+kind: Secret
+metadata:
+  name: mariadb-password-ftkgc8tmkc
+  namespace: capm3-system
+type: Opaque
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ironic
-  namespace: {{ .Values.namespace }}
+  name: capm3-ironic
+  namespace: capm3-system
 spec:
-  replicas: {{ .Values.ironic.replicaCount }}
+  replicas: 1
   selector:
     matchLabels:
-      name: ironic
+      name: capm3-ironic
+  strategy:
+    type: Recreate
   template:
     metadata:
       labels:
-        name: ironic
+        name: capm3-ironic
     spec:
-      hostNetwork: true
-      volumes:
-        - name: ironic-storage
-          persistentVolumeClaim:
-           claimName: ironic-pv-claim
-      {{- with .Values.ironic.nodeSelector }}
-      nodeSelector:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
       containers:
-        - name: dnsmasq
-          image: {{ .Values.ironic.images.ironic_aio }}
-          command: ["/bin/rundnsmasq"]
-          securityContext:
-            privileged: true
-          env:
-            - name: PROVISIONING_INTERFACE
-              value: {{ .Values.ironic.ironic_conf.provisioning_interface }}
-            - name: HTTP_PORT
-              value: {{ .Values.ironic.ironic_conf.http_port | quote }}
-            - name: DHCP_RANGE
-              value: {{ .Values.ironic.ironic_conf.dhcp_range }}
-            - name: DNSMASQ_EXCEPT_INTERFACE
-              value: {{ .Values.ironic.ironic_conf.dnsmasq_except_interface }}
-          volumeMounts:
-              - mountPath: "/shared"
-                name: ironic-storage
-        - name: httpd
-          image: {{ .Values.ironic.images.ironic_aio }}
-          command: ["/bin/runhttpd"]
-          securityContext:
-            privileged: true
-          env:
-            - name: PROVISIONING_INTERFACE
-              value: {{ .Values.ironic.ironic_conf.provisioning_interface }}
-            - name: HTTP_PORT
-              value: {{ .Values.ironic.ironic_conf.http_port | quote }}
-          volumeMounts:
-              - mountPath: "/shared"
-                name: ironic-storage
-        - name: mariadb
-          image: {{ .Values.ironic.images.ironic_aio }}
-          command: ["/bin/runmariadb"]
-          securityContext:
-            privileged: true
-          env:
-            - name: MARIADB_PASSWORD
-              value: {{ .Values.ironic.ironic_conf.mariadb_password }}
-            - name: PROVISIONING_INTERFACE
-              value: {{ .Values.ironic.ironic_conf.provisioning_interface }}
-          volumeMounts:
-            - mountPath: "/shared"
-              name: ironic-storage
-            - mountPath: "/var/lib/mysql"
-              name: ironic-storage
-              subPath: mysql
-        - name: ironic
-          image: {{ .Values.ironic.images.ironic_aio }}
-          securityContext:
-            privileged: true
-          env:
-            - name: MARIADB_PASSWORD
-              value: {{ .Values.ironic.ironic_conf.mariadb_password }}
-            - name: PROVISIONING_INTERFACE
-              value: {{ .Values.ironic.ironic_conf.provisioning_interface }}
-            - name: HTTP_PORT
-              value: {{ .Values.ironic.ironic_conf.http_port | quote }}
-          volumeMounts:
-            - mountPath: "/shared"
-              name: ironic-storage
-        - name: ironic-inspector
-          image: {{ .Values.ironic.images.ironic_inspector }}
-          securityContext:
-            privileged: true
-          env:
-            - name: PROVISIONING_INTERFACE
-              value: {{ .Values.ironic.ironic_conf.provisioning_interface }}
-          volumeMounts:
-            - mountPath: "/shared"
-              name: ironic-storage
+      - command:
+        - /bin/rundnsmasq
+        envFrom:
+        - configMapRef:
+            name: ironic-bmo-configmap-b796c74gkd
+        image: quay.io/metal3-io/ironic
+        imagePullPolicy: Always
+        name: ironic-dnsmasq
+        securityContext:
+          capabilities:
+            add:
+            - NET_ADMIN
+        volumeMounts:
+        - mountPath: /shared
+          name: ironic-data-volume
+      - command:
+        - /bin/runmariadb
+        env:
+        - name: MARIADB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: mariadb-password-ftkgc8tmkc
+        - name: RESTART_CONTAINER_CERTIFICATE_UPDATED
+          valueFrom:
+            configMapKeyRef:
+              key: RESTART_CONTAINER_CERTIFICATE_UPDATED
+              name: ironic-bmo-configmap-b796c74gkd
+        image: quay.io/metal3-io/ironic
+        imagePullPolicy: Always
+        name: mariadb
+        volumeMounts:
+        - mountPath: /shared
+          name: ironic-data-volume
+      - command:
+        - /bin/runironic-api
+        env:
+        - name: MARIADB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: mariadb-password-ftkgc8tmkc
+        envFrom:
+        - configMapRef:
+            name: ironic-bmo-configmap-b796c74gkd
+        image: quay.io/metal3-io/ironic
+        imagePullPolicy: Always
+        name: ironic-api
+        volumeMounts:
+        - mountPath: /shared
+          name: ironic-data-volume
+      - command:
+        - /bin/runironic-conductor
+        env:
+        - name: MARIADB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: mariadb-password-ftkgc8tmkc
+        envFrom:
+        - configMapRef:
+            name: ironic-bmo-configmap-b796c74gkd
+        image: quay.io/metal3-io/ironic
+        imagePullPolicy: Always
+        name: ironic-conductor
+        volumeMounts:
+        - mountPath: /shared
+          name: ironic-data-volume
+      - command:
+        - /bin/runlogwatch.sh
+        image: quay.io/metal3-io/ironic
+        imagePullPolicy: Always
+        name: ironic-log-watch
+        volumeMounts:
+        - mountPath: /shared
+          name: ironic-data-volume
+      - command:
+        - /bin/runironic-inspector
+        envFrom:
+        - configMapRef:
+            name: ironic-bmo-configmap-b796c74gkd
+        image: quay.io/metal3-io/ironic
+        imagePullPolicy: Always
+        name: ironic-inspector
+      hostNetwork: true
+      initContainers:
+      - command:
+        - /usr/local/bin/get-resource.sh
+        envFrom:
+        - configMapRef:
+            name: ironic-bmo-configmap-b796c74gkd
+        image: quay.io/metal3-io/ironic-ipa-downloader
+        imagePullPolicy: Always
+        name: ironic-ipa-downloader
+        volumeMounts:
+        - mountPath: /shared
+          name: ironic-data-volume
+      volumes:
+      - emptyDir: {}
+        name: ironic-data-volume
