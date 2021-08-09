@@ -21,7 +21,7 @@ bmo:
 
 ironic:
   namespace: "capm3-system"
-  config: "ironic-bmo-configmap-b796c74gkd"
+  config: "ironic-bmo-configmap"
   images:
     default: "quay.io/metal3-io/ironic"
     ipa_downloader: "quay.io/metal3-io/ironic-ipa-downloader"
