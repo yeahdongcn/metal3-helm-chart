@@ -1,2 +1,0 @@
-namespace: hardware-classification
-image: "quay.io/metal3-io/hardware-classification-controller:master"
