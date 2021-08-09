@@ -1,3 +1,12 @@
-apiVersion: v1
+apiVersion: v2
 name: metal3-io
 version: 0.1.0
+icon: https://ssl.gstatic.com/ui/v1/icons/mail/rfr/logo_gmail_lockup_dark_2x_r2.png
+dependencies:
+  - name: baremetal-operator
+    version: 0.1.0
+    repository: file://dependency_charts/baremetal-operator
+    tags:
+      - baremetal
+      - operator
+      - ironic

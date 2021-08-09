@@ -1,0 +1,27 @@
+CACHEURL: "http://172.22.0.1/images"
+DEPLOY_KERNEL_URL: "http://172.22.0.2:6180/images/ironic-python-agent.kernel"
+DEPLOY_RAMDISK_URL: "http://172.22.0.2:6180/images/ironic-python-agent.initramfs"
+DHCP_RANGE: "172.22.0.10,172.22.0.100"
+HTTP_PORT: "6180"
+INSPECTOR_REVERSE_PROXY_SETUP: "false"
+IRONIC_ENDPOINT: "http://172.22.0.2:6385/v1/"
+IRONIC_FAST_TRACK: "true"
+IRONIC_INSPECTOR_ENDPOINT: "http://172.22.0.2:5050/v1/"
+IRONIC_INSPECTOR_VLAN_INTERFACES: "all"
+IRONIC_KERNEL_PARAMS: "console=ttyS0"
+PROVISIONING_INTERFACE: "eth0"
+RESTART_CONTAINER_CERTIFICATE_UPDATED: "false"
+
+bmo:
+  namespace: "baremetal-operator-system"
+  config: "baremetal-operator-ironic"
+  images:
+    kube_rbac_proxy: gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0
+    baremetal_operator: "quay.io/metal3-io/baremetal-operator"
+
+ironic:
+  namespace: "capm3-system"
+  config: "ironic-bmo-configmap-b796c74gkd"
+  images:
+    default: "quay.io/metal3-io/ironic"
+    ipa_downloader: "quay.io/metal3-io/ironic-ipa-downloader"

@@ -1,0 +1,6 @@
+dependencies:
+- name: baremetal-operator
+  repository: file://dependency_charts/baremetal-operator
+  version: 0.1.0
+digest: sha256:6966cd3d5bf724a1b8c0045be2921664e90902df4dbba5f0a993badd666fa1f9
+generated: "2021-08-09T20:28:23.467188+08:00"
