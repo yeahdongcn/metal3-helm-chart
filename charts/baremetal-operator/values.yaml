@@ -1,0 +1,13 @@
+bmo:
+  namespace: "baremetal-operator-system"
+  config: "baremetal-operator-ironic"
+  images:
+    kube_rbac_proxy: gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0
+    baremetal_operator: "quay.io/metal3-io/baremetal-operator"
+
+ironic:
+  namespace: "capm3-system"
+  config: "ironic-bmo-configmap-b796c74gkd"
+  images:
+    default: "quay.io/metal3-io/ironic"
+    ipa_downloader: "quay.io/metal3-io/ironic-ipa-downloader"

@@ -3,7 +3,7 @@ kind: Namespace
 metadata:
   labels:
     control-plane: controller-manager
-  name: baremetal-operator-system
+  name: {{ .Values.bmo.namespace }}
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
@@ -1285,7 +1285,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: baremetal-operator-leader-election-role
-  namespace: baremetal-operator-system
+  namespace: {{ .Values.bmo.namespace }}
 rules:
 - apiGroups:
   - ""
@@ -1405,7 +1405,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: baremetal-operator-leader-election-rolebinding
-  namespace: baremetal-operator-system
+  namespace: {{ .Values.bmo.namespace }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -1413,7 +1413,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: default
-  namespace: baremetal-operator-system
+  namespace: {{ .Values.bmo.namespace }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -1426,7 +1426,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: default
-  namespace: baremetal-operator-system
+  namespace: {{ .Values.bmo.namespace }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -1439,7 +1439,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: default
-  namespace: baremetal-operator-system
+  namespace: {{ .Values.bmo.namespace }}
 ---
 apiVersion: v1
 data:
@@ -1451,11 +1451,11 @@ data:
   IRONIC_ENDPOINT: http://172.22.0.2:6385/v1/
   IRONIC_FAST_TRACK: "true"
   IRONIC_INSPECTOR_ENDPOINT: http://172.22.0.2:5050/v1/
-  PROVISIONING_INTERFACE: eth2
+  PROVISIONING_INTERFACE: eth0
 kind: ConfigMap
 metadata:
-  name: baremetal-operator-ironic
-  namespace: baremetal-operator-system
+  name: {{ .Values.bmo.config }}
+  namespace: {{ .Values.bmo.namespace }}
 ---
 apiVersion: v1
 kind: Service
@@ -1463,7 +1463,7 @@ metadata:
   labels:
     control-plane: controller-manager
   name: baremetal-operator-controller-manager-metrics-service
-  namespace: baremetal-operator-system
+  namespace: {{ .Values.bmo.namespace }}
 spec:
   ports:
   - name: https
@@ -1478,7 +1478,7 @@ metadata:
   labels:
     control-plane: controller-manager
   name: baremetal-operator-controller-manager
-  namespace: baremetal-operator-system
+  namespace: {{ .Values.bmo.namespace }}
 spec:
   replicas: 1
   selector:
@@ -1495,7 +1495,7 @@ spec:
         - --upstream=http://127.0.0.1:8085/
         - --logtostderr=true
         - --v=10
-        image: gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0
+        image: {{ .Values.bmo.images.kube_rbac_proxy }}
         name: kube-rbac-proxy
         ports:
         - containerPort: 8443
@@ -1516,8 +1516,8 @@ spec:
               fieldPath: metadata.namespace
         envFrom:
         - configMapRef:
-            name: baremetal-operator-ironic
-        image: quay.io/metal3-io/baremetal-operator
+            name: {{ .Values.bmo.config }}
+        image: {{ .Values.bmo.images.baremetal_operator }}
         imagePullPolicy: Always
         livenessProbe:
           httpGet:
